@@ -41,18 +41,20 @@ func NewApplication(cfg *Config) (*Application, error) {
 		}
 		a.slobs = append(a.slobs, slob)
 
-		ch, _ := slob.Keys()
+		if !cfg.Autocomplete.Disable {
+			ch, _ := slob.Keys()
 
-		// if we have multiple sources, we list the source in the description
-		var from string
-		if len(cfg.Input) > 1 {
-			from = fmt.Sprintf("Source: %s", filename)
-		}
+			// if we have multiple sources, we list the source in the description
+			var from string
+			if len(cfg.Input) > 1 {
+				from = fmt.Sprintf("Source: %s", filename)
+			}
 
-		for key := range ch {
-			if !a.cfg.SkipKey(key.Key) {
-				a.suggestions = append(a.suggestions, prompt.Suggest{Text: key.Key, Description: from})
-				a.lookup[key.Key] = key
+			for key := range ch {
+				if !a.cfg.SkipKey(key.Key) {
+					a.suggestions = append(a.suggestions, prompt.Suggest{Text: key.Key, Description: from})
+					a.lookup[key.Key] = key
+				}
 			}
 		}
 	}
@@ -61,7 +63,7 @@ func NewApplication(cfg *Config) (*Application, error) {
 }
 
 func (a *Application) completer(d prompt.Document) []prompt.Suggest {
-	if len(d.Text) < 3 {
+	if len(d.Text) < 3 || !a.cfg.Autocomplete.Disable {
 		return nil
 	}
 	return prompt.FilterHasPrefix(a.suggestions, d.GetWordBeforeCursor(), true)

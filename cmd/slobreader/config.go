@@ -7,9 +7,12 @@ import (
 )
 
 type Config struct {
-	Input      []string          `yaml:"input"`
-	IgnoreKeys []string          `yaml:"ignore_keys"`
-	Genders    map[string]string `yaml:"genders"`
+	Input        []string          `yaml:"input"`
+	Genders      map[string]string `yaml:"genders"`
+	Autocomplete struct {
+		Disable    bool     `yaml:"disable"`
+		IgnoreKeys []string `yaml:"ignore_keys"`
+	} `yaml:"autocomplete"`
 }
 
 func ReadConfig(filename string) (*Config, error) {
@@ -39,7 +42,7 @@ func (c *Config) Gender(in string) string {
 }
 
 func (c *Config) SkipKey(key string) bool {
-	for _, skip := range c.IgnoreKeys {
+	for _, skip := range c.Autocomplete.IgnoreKeys {
 		if skip == key {
 			return true
 		}
