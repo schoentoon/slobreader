@@ -12,43 +12,59 @@ import (
 )
 
 type Application struct {
-	Slob *goslob.Slob
-
-	file        *os.File
+	cfg         *Config
+	slobs       []*goslob.Slob
+	files       []*os.File
 	suggestions []prompt.Suggest
 	lookup      map[string]*goslob.Ref
 }
 
-func NewApplication(filename string) (*Application, error) {
-	f, err := os.Open(filename)
-	if err != nil {
-		return nil, err
-	}
-
-	slob, err := goslob.SlobFromReader(f)
-	if err != nil {
-		return nil, err
-	}
-
+func NewApplication(cfg *Config) (*Application, error) {
 	a := &Application{
-		Slob:        slob,
-		file:        f,
+		cfg:         cfg,
+		slobs:       make([]*goslob.Slob, 0, len(cfg.Input)),
+		files:       make([]*os.File, 0, len(cfg.Input)),
 		suggestions: make([]prompt.Suggest, 0),
 		lookup:      make(map[string]*goslob.Ref),
 	}
 
-	ch, _ := slob.Keys()
+	for _, filename := range cfg.Input {
+		f, err := os.Open(filename)
+		if err != nil {
+			return nil, err
+		}
+		a.files = append(a.files, f)
 
-	for key := range ch {
-		a.suggestions = append(a.suggestions, prompt.Suggest{Text: key.Key})
-		a.lookup[key.Key] = key
+		slob, err := goslob.SlobFromReader(f)
+		if err != nil {
+			return nil, err
+		}
+		a.slobs = append(a.slobs, slob)
+
+		ch, _ := slob.Keys()
+
+		// if we have multiple sources, we list the source in the description
+		var from string
+		if len(cfg.Input) > 1 {
+			from = fmt.Sprintf("Source: %s", filename)
+		}
+
+		for key := range ch {
+			if !a.cfg.SkipKey(key.Key) {
+				a.suggestions = append(a.suggestions, prompt.Suggest{Text: key.Key, Description: from})
+				a.lookup[key.Key] = key
+			}
+		}
 	}
 
 	return a, nil
 }
 
 func (a *Application) completer(d prompt.Document) []prompt.Suggest {
-	return prompt.FilterFuzzy(a.suggestions, d.GetWordBeforeCursor(), true)
+	if len(d.Text) < 3 {
+		return nil
+	}
+	return prompt.FilterHasPrefix(a.suggestions, d.GetWordBeforeCursor(), true)
 }
 
 func (a *Application) executor(in string) {
@@ -76,7 +92,7 @@ func (a *Application) executor(in string) {
 		return
 	}
 
-	output, err := rendered.Render(out.String())
+	output, err := rendered.Render(out.Render(a.cfg))
 	if err != nil {
 		fmt.Printf("%s\n", err)
 		return
@@ -93,7 +109,13 @@ func main() {
 		os.Exit(1)
 	}
 
-	a, err := NewApplication(flag.Arg(0))
+	cfg, err := ReadConfig(flag.Arg(0))
+	if err != nil {
+		fmt.Printf("%s\n", err)
+		os.Exit(1)
+	}
+
+	a, err := NewApplication(cfg)
 	if err != nil {
 		log.Fatal(err)
 	}

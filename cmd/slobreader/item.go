@@ -105,12 +105,17 @@ func ParseItem(item *goslob.Item) (*WordEntry, error) {
 	return out, nil
 }
 
-func (w *WordEntry) String() string {
+func (w *WordEntry) Render(cfg *Config) string {
 	out := fmt.Sprintf("# %s\n\n", w.Input)
 
 	for _, word := range w.Output {
 		if word.Gender != "" {
-			out += fmt.Sprintf("* %s (%s)\n", word.Word, word.Gender)
+			gender := cfg.Gender(word.Gender)
+			if gender != "" {
+				out += fmt.Sprintf("* %s %s\n", gender, word.Word)
+			} else {
+				out += fmt.Sprintf("* %s (%s)\n", word.Word, word.Gender)
+			}
 		} else {
 			out += fmt.Sprintf("* %s\n", word.Word)
 		}

@@ -1,0 +1,14 @@
+input:
+  - tmp/freedict-nld-deu-0.2.1.slob
+  - tmp/freedict-eng-deu-1.9-fd1.slob
+ignore_keys:
+  - ~/css/default.css
+  - ~/css/night.css
+  - ~/js/styleswitcher.js
+genders:
+  f: "Die"
+  fem: "Die"
+  n: "Das"
+  neut: "Das"
+  m: "Der"
+  masc: "Der"

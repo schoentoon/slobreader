@@ -30,4 +30,5 @@ require (
 	github.com/yuin/goldmark-emoji v1.0.1 // indirect
 	golang.org/x/net v0.0.0-20220516155154-20f960328961 // indirect
 	golang.org/x/sys v0.0.0-20211216021012-1d35b9e2eb4e // indirect
+	gopkg.in/yaml.v3 v3.0.0-20220512140231-539c8e751b99 // indirect
 )
