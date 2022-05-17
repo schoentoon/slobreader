@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"github.com/c-bata/go-prompt"
+	"github.com/charmbracelet/glamour"
 	goslob "github.com/schoentoon/go-slob"
 )
 
@@ -63,7 +64,25 @@ func (a *Application) executor(in string) {
 		return
 	}
 
-	fmt.Printf("%s\n", item.Content)
+	out, err := ParseItem(item)
+	if err != nil {
+		fmt.Printf("%s\n", err)
+		return
+	}
+
+	rendered, err := glamour.NewTermRenderer(glamour.WithAutoStyle())
+	if err != nil {
+		fmt.Printf("%s\n", err)
+		return
+	}
+
+	output, err := rendered.Render(out.String())
+	if err != nil {
+		fmt.Printf("%s\n", err)
+		return
+	}
+
+	fmt.Printf("%s", output)
 }
 
 func main() {
