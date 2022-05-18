@@ -4,7 +4,7 @@ go 1.18
 
 require (
 	github.com/c-bata/go-prompt v0.2.5
-	github.com/schoentoon/go-slob v0.0.0-20220516012616-0842c9a4d181
+	github.com/schoentoon/go-slob v0.0.0-20220517234959-5b4151a70b01
 )
 
 require (

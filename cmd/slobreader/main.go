@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
+	"sync"
+	"sync/atomic"
 
 	"github.com/c-bata/go-prompt"
 	"github.com/charmbracelet/glamour"
@@ -12,11 +15,13 @@ import (
 )
 
 type Application struct {
-	cfg         *Config
-	slobs       []*goslob.Slob
-	files       []*os.File
+	cfg   *Config
+	slobs []*goslob.Slob
+	files []*os.File
+
+	ready       int32
+	mutex       sync.RWMutex
 	suggestions []prompt.Suggest
-	lookup      map[string]*goslob.Ref
 }
 
 func NewApplication(cfg *Config) (*Application, error) {
@@ -24,8 +29,8 @@ func NewApplication(cfg *Config) (*Application, error) {
 		cfg:         cfg,
 		slobs:       make([]*goslob.Slob, 0, len(cfg.Input)),
 		files:       make([]*os.File, 0, len(cfg.Input)),
+		ready:       0,
 		suggestions: make([]prompt.Suggest, 0),
-		lookup:      make(map[string]*goslob.Ref),
 	}
 
 	for _, filename := range cfg.Input {
@@ -42,41 +47,69 @@ func NewApplication(cfg *Config) (*Application, error) {
 		a.slobs = append(a.slobs, slob)
 
 		if !cfg.Autocomplete.Disable {
-			ch, _ := slob.Keys()
-
-			// if we have multiple sources, we list the source in the description
-			var from string
-			if len(cfg.Input) > 1 {
-				from = fmt.Sprintf("Source: %s", filename)
-			}
-
-			for key := range ch {
-				if !a.cfg.SkipKey(key.Key) {
-					a.suggestions = append(a.suggestions, prompt.Suggest{Text: key.Key, Description: from})
-					a.lookup[key.Key] = key
-				}
-			}
+			go a.fillSuggestions(filename, slob)
 		}
 	}
 
 	return a, nil
 }
 
+func (a *Application) fillSuggestions(filename string, slob *goslob.Slob) {
+	ch, _ := slob.Keys()
+	suggestions := make([]prompt.Suggest, 0)
+
+	// if we have multiple sources, we list the source in the description
+	var from string
+	if len(a.cfg.Input) > 1 {
+		from = fmt.Sprintf("Source: %s", filename)
+	}
+
+	for key := range ch {
+		if !a.cfg.SkipKey(key.Key) {
+			suggestions = append(suggestions, prompt.Suggest{Text: key.Key, Description: from})
+		}
+	}
+
+	a.mutex.Lock()
+	defer a.mutex.Unlock()
+
+	a.suggestions = append(a.suggestions, suggestions...)
+
+	atomic.AddInt32(&a.ready, 1)
+}
+
 func (a *Application) completer(d prompt.Document) []prompt.Suggest {
-	if len(d.Text) < 3 || !a.cfg.Autocomplete.Disable {
+	if a.cfg.Autocomplete.Disable {
 		return nil
 	}
+
+	if len(d.Text) < 3 {
+		return nil
+	}
+
+	if atomic.LoadInt32(&a.ready) != int32(len(a.cfg.Input)) {
+		return nil
+	}
+
 	return prompt.FilterHasPrefix(a.suggestions, d.GetWordBeforeCursor(), true)
 }
 
 func (a *Application) executor(in string) {
-	ref, ok := a.lookup[in]
-	if !ok {
-		fmt.Printf("Not found\n")
+	in = strings.Trim(in, " ")
+	if in == "" { // we ignore empty input
 		return
 	}
 
-	item, err := ref.Get()
+	var item *goslob.Item
+	var err error
+
+	for _, slob := range a.slobs {
+		item, err = slob.Find(in)
+		if err == nil {
+			break
+		}
+	}
+
 	if err != nil {
 		fmt.Printf("%s\n", err)
 		return
