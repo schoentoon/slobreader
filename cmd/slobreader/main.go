@@ -159,8 +159,11 @@ func main() {
 
 	cfg, err := ReadConfig(cfgfile)
 	if err != nil {
-		fmt.Printf("%s\n", err)
-		os.Exit(1)
+		fmt.Printf("%s, opening as a slob file instead.\n", err)
+
+		cfg = &Config{
+			Input: []string{cfgfile},
+		}
 	}
 
 	a, err := NewApplication(cfg)

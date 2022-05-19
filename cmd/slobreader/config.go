@@ -34,6 +34,10 @@ func ReadConfig(filename string) (*Config, error) {
 }
 
 func (c *Config) Gender(in string) string {
+	if c.Genders == nil {
+		return ""
+	}
+
 	out, ok := c.Genders[in]
 	if ok {
 		return out
