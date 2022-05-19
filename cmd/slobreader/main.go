@@ -3,7 +3,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"log"
 	"os"
 	"strings"
 	"sync"
@@ -168,7 +167,8 @@ func main() {
 
 	a, err := NewApplication(cfg)
 	if err != nil {
-		log.Fatal(err)
+		fmt.Printf("%s\n", err)
+		os.Exit(1)
 	}
 
 	p := prompt.New(a.executor, a.completer)
