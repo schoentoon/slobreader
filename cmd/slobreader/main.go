@@ -9,8 +9,10 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/adrg/xdg"
 	"github.com/c-bata/go-prompt"
 	"github.com/charmbracelet/glamour"
+	"github.com/mitchellh/go-homedir"
 	goslob "github.com/schoentoon/go-slob"
 )
 
@@ -34,7 +36,12 @@ func NewApplication(cfg *Config) (*Application, error) {
 	}
 
 	for _, filename := range cfg.Input {
-		f, err := os.Open(filename)
+		fullpath, err := homedir.Expand(filename)
+		if err != nil {
+			return nil, err
+		}
+
+		f, err := os.Open(fullpath)
 		if err != nil {
 			return nil, err
 		}
@@ -139,12 +146,18 @@ func (a *Application) executor(in string) {
 func main() {
 	flag.Parse()
 
-	if flag.NArg() == 0 {
-		fmt.Printf("Didn't get slob file as an argument\n")
+	cfgfile, _ := xdg.ConfigFile("slobreader/default.yml")
+	if flag.NArg() > 0 {
+		cfgfile = flag.Arg(0)
+	}
+
+	cfgfile, err := homedir.Expand(cfgfile)
+	if err != nil {
+		fmt.Printf("%s\n", err)
 		os.Exit(1)
 	}
 
-	cfg, err := ReadConfig(flag.Arg(0))
+	cfg, err := ReadConfig(cfgfile)
 	if err != nil {
 		fmt.Printf("%s\n", err)
 		os.Exit(1)
