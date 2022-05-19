@@ -1,5 +1,7 @@
 # slobreader
 
+[![Gitlab pipeline status](https://gitlab.com/schoentoon/slobreader/badges/master/pipeline.svg)](https://gitlab.com/schoentoon/slobreader)
+
 A commandline [slob](https://github.com/itkach/slob)reader, specifically aimed at the [freedict](https://freedict.org/downloads/index.html#smartphones-and-tablets) files for translation lookup.
 You can launch this tool with either a .slob file as an argument.
 Or with a [config file](./german.yml), which can also be used to pretty print genders of words, disable autocomplete, ignore certain entries.
