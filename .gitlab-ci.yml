@@ -1,0 +1,41 @@
+stages:
+  - test
+  - build
+
+test:
+  stage: test
+  image: golang:latest
+  coverage: /^coverage:\s(\d+(?:\.\d+)?%)/
+  before_script:
+    - go install github.com/boumenot/gocover-cobertura@latest
+    - go install gotest.tools/gotestsum@latest
+  script:
+    - gotestsum --format testname --junitfile report.xml -- -coverprofile=coverage.txt -race ./...
+    - gocover-cobertura < coverage.txt > coverage.xml
+  artifacts:
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage.xml
+      junit: report.xml
+
+
+golangci-linter:
+  stage: test
+  image: golangci/golangci-lint:latest
+  script:
+    - golangci-lint run -v --timeout 1h
+
+build:
+  stage: build
+  image: golang:latest
+  script:
+    - find cmd -type d -mindepth 1 -maxdepth 1 | xargs -i go build ./{}/...
+  artifacts:
+    untracked: true
+
+sast:
+  stage: test
+include:
+- template: Security/SAST.gitlab-ci.yml
+- template: Security/Dependency-Scanning.gitlab-ci.yml
